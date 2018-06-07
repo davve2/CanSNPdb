@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block head_title %} Add new CanSNP {% endblock head_title %}
+
+{% block title %}
+Add new canSNP
+{% endblock title %}
+
+
+{% block content2 %}
+
+<form method='POST' action=''>{% csrf_token %}
+	{{form.as_p}}
+	Strain:<br>
+	  <input type="text" name="strain"><br>
+	  CanSNP's:<br>
+	  <textarea name="canSNPs"> </textarea><br>
+<input type='submit' value='Submit' />
+</form>
+
+{% endblock content2 %}
+

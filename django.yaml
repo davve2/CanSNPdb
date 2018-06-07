@@ -1,0 +1,41 @@
+name: django
+channels:
+  - bioconda
+  - conda-forge
+  - defaults
+dependencies:
+  - ca-certificates=2018.4.16=0
+  - certifi=2018.4.16=py36_0
+  - django=2.0.5=py36hd476221_0
+  - expat=2.2.5=0
+  - fontconfig=2.12.6=0
+  - freetype=2.8.1=0
+  - giflib=5.1.4=0
+  - icu=58.2=0
+  - jansson=2.11=0
+  - jpeg=9b=2
+  - libgd=2.2.5=3
+  - libiconv=1.15=0
+  - libpng=1.6.34=0
+  - libtiff=4.0.9=0
+  - libwebp=0.5.2=7
+  - libxml2=2.9.8=0
+  - libxslt=1.1.32=0
+  - ncurses=5.9=10
+  - nginx=1.12.2=1
+  - openssl=1.0.2o=0
+  - pcre=8.41=1
+  - pip=9.0.3=py36_0
+  - python=3.6.5=1
+  - pytz=2018.4=py_0
+  - readline=7.0=0
+  - setuptools=39.1.0=py36_0
+  - sqlite=3.20.1=2
+  - tk=8.6.7=0
+  - uwsgi=2.0.17=py36_0
+  - wheel=0.31.0=py36_0
+  - xz=5.2.3=0
+  - yaml=0.1.7=0
+  - zlib=1.2.11=0
+prefix: /Users/david/miniconda2/envs/django
+

@@ -1,0 +1,12 @@
+{% if request.path != "/" %}
+<a class='navButton' href='/'>Home</a>
+{% endif %}
+{% if request.path != "/wiki/" %}
+<a class='navButton' href='/wiki'>Info</a>
+{% endif %}
+{% if request.path != "/submission/" %}
+<a class='navButton canSNPButton' href='/submission'>Add CanSNP</a>
+{% endif %}
+{% if request.path != "/analysis/" %}
+<a class='navButton' href='/analysis'>Analysis</a>
+{% endif %}
