@@ -21,6 +21,8 @@ from francisella_web.views import (
     WikiView,
     SubmitView,
     AnalysisView,
+    FormView,
+    get_tree_data,
 )
 
 urlpatterns = [
@@ -29,7 +31,10 @@ urlpatterns = [
     path('wiki/', WikiView.as_view(), name="wiki"),
     path('submission/', SubmitView.as_view(), name="submission"),
     path('analysis/', AnalysisView.as_view(), name="analysis"),
-
+    #path('submission/', FormView.as_view(), name="submission"),
+    path('get_tree/', get_tree_data, name="analysis"),
+    
+    
 ]
 
 from django.conf.urls.static import static

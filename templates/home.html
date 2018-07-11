@@ -16,7 +16,8 @@ Main wiki text, or explanation of site (home)
 
 {% block content2 %}
 
-Default Tree view, of current latest version of the CanSNP tree (interacitve?)
+<div class="networkInfoText" >Default Tree view, of current latest version of the CanSNP tree (interacitve?) <input class="inputBox" id="snpinput" size="2" name="SNProot" value="263"> </input>
+</div>
 <div id="network-container" class="network-container">
 
 </div>
@@ -24,269 +25,345 @@ Default Tree view, of current latest version of the CanSNP tree (interacitve?)
 {% endblock content2 %}
 
 {% block network %}
-<!-- load the d3.js library -->	
+
+<!-- load the d3.js library --> 
 <script src="http://d3js.org/d3.v3.min.js"></script>
 	
 <script>
 
-var treeData = [
-  {
-    "name": "Francisella",
-    "parent": "null",
-    "children": [
-      {
-        "name": "Francisella tularensis",
-        "parent": "Francisella",
-        "children": [
-          {
-            "name": "A.1",
-            "parent": "Francisella tularensis",
-            "children": [
-              {
-                "name": "A.1.I",
-                "parent": "A.1"
-              },
-              {
-                "name": "A.1.II",
-                "parent": "A.1"
-              },
+var timeout;
+var topoffset = 210;
+var leftoffset = 10;
+var treeData = null;
+var glob_height = 500;
+var selected_default = "263";
 
-            ]
-          },
-          {
-            "name": "B.1",
-            "parent": "Francisella tularensis",
-            "children": [
-                {
-                    "name": "B.12",
-                    "parent": "Francisella tularensis"
-                  },
-            ]
-          }
-        ]
-      },
-      {
-        "name": "Francisella hispanensis",
-        "parent": "Francisella"
-      }
-    ]
-  }
-];
+function set_glob_height(height){
+	glob_height = height;
+}
+
+function getCookie(name) {
+	var cookieValue = null;
+	if (document.cookie && document.cookie != '') {
+		var cookies = document.cookie.split(';');
+		for (var i = 0; i < cookies.length; i++) {
+			var cookie = jQuery.trim(cookies[i]);
+			// Does this cookie string begin with the name we want?
+			if (cookie.substring(0, name.length + 1) == (name + '=')) {
+				cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+				break;
+			}
+		}
+	}
+	return cookieValue;
+}
+
+function load_tree(snpid){
+	var csrftoken = getCookie('csrftoken');
+	$.ajax({
+		type: "POST",
+		url: "get_tree/", 
+		async:false,
+		data: {
+			'SNPid':snpid,
+			'csrfmiddlewaretoken':csrftoken,
+			'database':"FOIWebsite.db",
+			'table':"SNP"
+		},
+		success: function(data) {
+			treeData = JSON.parse(data)
+		}
+	});
+	return(treeData);
+}
+
+/* This function calls the database and rewrite the tree with the selected root node */
+function change_root(){
+	d3.select("#networksvg").remove();
+	treeData = null;
+	new_root = $("#snpinput").val();
+	treeData = load_tree(snpid=new_root);
+	render_tree(treeData);
+}
+
+/* Tool tip div */ 
+var div = d3.select("body").append("div")   
+	.attr("class", "tooltip")               
+	.style("opacity", 0);
+
+/*  Tooltip response functions get requested data from database */
 
 
-// ************** Generate the tree diagram	 *****************
-// Margins required for node lables to fit within frame
-var margin = {top: 20, right: 120, bottom: 20, left: 120},
-	width = 960 - margin.right - margin.left,
-	height = 500 - margin.top - margin.bottom;
+function tooltipNode(node){
+	return(node);
+}
+
+function tooltipLink(link){
+	return(link);
+}
+
+// ----- end tooltip functions -----
+
+function render_tree(ltreeData){
+	// ************** Generate the tree diagram  *****************
+	// Margins required for node lables to fit within frame width adjusted to current window size
+	var margin = {top: 10, right: 40, bottom: 10, left: 40},
+		width = $(window).width() - margin.right - margin.left,
+		height = glob_height - margin.top - margin.bottom;
+		
+	var i = 0,
+		duration = 750,
+		root;
+
+	var tree = d3.layout.tree()
+		.size([height, width]);
+
+	var diagonal = d3.svg.diagonal()
+		.projection(function(d) { return [d.y, d.x]; });
+
+	var svg = d3.select("div.network-container").append("svg")
+		.attr("id", "networksvg")
+		.attr("width", width + margin.right + margin.left)
+		.attr("height", height + margin.top + margin.bottom)
+		.append("g")
+		.attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+	root = ltreeData[0];
+	root.x0 = height / 2;
+	root.y0 = 0;
+
+
+	/*### Count child level and adjust width */
+	var levelWidth = [1];
+	var childCount = function(level, n) {
+		if(n.children && n.children.length > 0) {
+			if(levelWidth.length <= level + 1) levelWidth.push(0);
+			levelWidth[level+1] += 1;
+			n.children.forEach(function(d) {
+				childCount(level + 1, d);
+			});
+		}
+	};
 	
-var i = 0,
-	duration = 750,
-	root;
+	childCount(0, root);  
 
-var tree = d3.layout.tree()
-	.size([height, width]);
+	//console.log(Math.max.apply(null,levelWidth));
+	//console.log(levelWidth);
+	//Math.max.apply(null,levelWidth)   use if also height scale!
 
-var diagonal = d3.svg.diagonal()
-	.projection(function(d) { return [d.y, d.x]; });
+	var treedepth = (width/levelWidth.length)
+	update(root);
 
-var svg = d3.select("div.network-container").append("svg")
-	.attr("width", width + margin.right + margin.left)
-	.attr("height", height + margin.top + margin.bottom)
-  .append("g")
-	.attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+	d3.select(self.frameElement).style("height", "1000px");
 
-root = treeData[0];
-root.x0 = height / 2;
-root.y0 = 0;
-  
-update(root);
+	function update(source) {
 
-d3.select(self.frameElement).style("height", "500px");
+		// Compute the new tree layout.
+		var nodes = tree.nodes(root).reverse(),
+			links = tree.links(nodes);
 
-function update(source) {
+		// Normalize for fixed-depth.
+		nodes.forEach(function(d) { 
+			d.y = d.depth * treedepth; 
+		});
 
-  // Compute the new tree layout.
-  var nodes = tree.nodes(root).reverse(),
-	  links = tree.links(nodes);
+		// Update the nodes…
+		var node = svg.selectAll("g.node")
+			.data(nodes, function(d) { 
+				return d.id || (d.id = ++i); 
+			});
 
-  // Normalize for fixed-depth.
-  nodes.forEach(function(d) { 
-    d.y = d.depth * 180; 
-  });
+		// Enter any new nodes at the parent's previous position.
+		var nodeEnter = node.enter().append("g")
+			.attr("class", "node")
+			.attr("transform", function(d) { 
+				return "translate(" + source.y0 + "," + source.x0 + ")"; 
+			})
+			.on("click", click)
+			.on("dblclick", dblClick)
+			.on("mouseover", function(obj){
+				if(timeout) clearTimeout(timeout);
+				timeout = setTimeout(mouseover, 1000,obj);
+			}).on("mouseout", function(obj){
+				clearTimeout(timeout);
+				mouseout(obj);
+			})
 
-  // Update the nodes…
-  var node = svg.selectAll("g.node")
-	  .data(nodes, function(d) { 
-      return d.id || (d.id = ++i); 
-    });
-
-  // Enter any new nodes at the parent's previous position.
-  var nodeEnter = node.enter().append("g")
-	  .attr("class", "node")
-	  .attr("transform", function(d) { 
-      return "translate(" + source.y0 + "," + source.x0 + ")"; 
-    })
-	  .on("click", click);
-
-  nodeEnter.append("circle")
-	  .attr("r", 1e-6)
-	  .style("fill", function(d) { 
-      return d._children ? "lightsteelblue" : "#fff"; // If child then blue else white
-    });
-
-  nodeEnter.append("text")
-	  .attr("x", function(d) { return d.children || d._children ? -13 : 13; })
-	  .attr("dy", ".35em")
-	  .attr("text-anchor", function(d) { 
-      return d.children || d._children ? "end" : "start"; 
-    })
-	  .text(function(d) { return d.name; })
-	  .style("fill-opacity", 1e-6);
-
-  // Transition nodes to their new position.
-  var nodeUpdate = node.transition()
-	  .duration(duration)
-	  .attr("transform", function(d) { 
-      return "translate(" + d.y + "," + d.x + ")"; 
-    });
-
-  nodeUpdate.select("circle")
-	  .attr("r", 10)
-	  .style("fill", function(d) { 
-      return d._children ? "lightsteelblue" : "#fff"; 
-    });
-
-  nodeUpdate.select("text")
-	  .style("fill-opacity", 1);
-
-  // Transition exiting nodes to the parent's new position.
-  var nodeExit = node.exit().transition()
-	  .duration(duration)
-	  .attr("transform", function(d) { 
-      return "translate(" + source.y + "," + source.x + ")"; 
-    })
-	  .remove();
-
-  nodeExit.select("circle")
-	  .attr("r", 1e-6);
-
-  nodeExit.select("text")
-	  .style("fill-opacity", 1e-6);
-
-  // Update the links…
-  var link = svg.selectAll(".link")
-	  .data(links, function(d) { 
-      return d.target.id; 
-    });
-
-    /* 
-        https://stackoverflow.com/questions/35123734/placing-label-in-the-middle-of-a-link-in-d3-js-tree-layout#35128428
-
-    */
-
-  // Enter any new links at the parent's previous position.
-  link.enter().insert("path", "g")
-	  .attr("class", "link")
-	  .attr("d", function(d) {
-		var o = {x: source.x0, y: source.y0};
-		  return diagonal({source: o, target: o});
-	  });
-
-  link.append("text")
-    .attr("class","text-link")
-    .attr("font-family", "Arial, Helvetica, sans-serif")
-    .attr("fill", "Black")
-    .style("font", "normal 12px Arial")
+		nodeEnter.append("circle")
+			.attr("r", 1e-6)
+			.style("fill", function(d) { 
+				return d._children ? "lightsteelblue" : d.color; // If child then blue else white
+			});
 
 
-  // Transition links to their new position.
-  link.transition()
-	  .duration(duration)
-	  .attr("d", diagonal);
 
-  // Transition exiting nodes to the parent's new position.
-  link.exit().transition()
-	  .duration(duration)
-	  .attr("d", function(d) {
-		var o = {x: source.x, y: source.y};
-		  return diagonal({source: o, target: o});
-	  })
-	  .remove();
+		nodeEnter.append("text")
+			.attr("x", function(d) { return d.children || d._children ? -13 : 13; })
+			.attr("dy", ".35em")
+			.attr("text-anchor", function(d) { 
+				return d.children || d._children ? "end" : "start"; 
+			})
+			.text(function(d) { return d.name; })
+			.style("fill-opacity", 1e-6);
 
-  
-    var text = edge.selectAll("link.text-link")
-      .data(links, function(d) {
-        return d.target.id + d.source.id;
-      });
+		// Transition nodes to their new position.
+		var nodeUpdate = node.transition()
+			.duration(duration)
+			.attr("transform", function(d) { 
+				return "translate(" + d.y + "," + d.x + ")"; 
+			});
 
-    text.enter().insert("text", "edge-container")
-      .attr("class", "text-link")
+		nodeUpdate.select("circle")
+			.attr("r", 10)
+			.style("fill", function(d) { 
+				return d._children ? "lightsteelblue" : d.color; 
+			});
 
-    .attr("x", function(d) {
-        var x = (d.target.y + d.source.y) / 2
-        return x - 50;
-      })
-      .attr("y", function(d) {
-        var y = (d.source.x + d.target.x) / 2
-        return y;
-      })
-      .text("test-label")
-      .attr("text-anchor", "start")
-      .style("font-size", "12px");
+		nodeUpdate.select("text")
+			.style("fill-opacity", 1);
 
-    /* transition labels to new positions */
-    var label = svg.selectAll("text.text-link")
-      .data(links, function(d) {
-        return d.target.id;
-      });
+		// Transition exiting nodes to the parent's new position.
+		var nodeExit = node.exit().transition()
+			.duration(duration)
+			.attr("transform", function(d) { 
+				return "translate(" + source.y + "," + source.x + ")"; 
+			})
+			.remove();
 
-    // Transition links to their new position.
-    label.transition()
-      .duration(0);
+		nodeExit.select("circle")
+			.attr("r", 1e-6);
 
-    // Transition exiting nodes to the parent's new position.
-    label.exit().transition()
-      .duration(duration)
-      .attr("d", function(d) {
-        var o = {
-          x: source.x,
-          y: source.y
-        };
-        return diagonal({
-          source: o,
-          target: o
-        });
-      })
-      .remove();
+		nodeExit.select("text")
+			.style("fill-opacity", 1e-6);
 
 
-  /*
-  .attr("x", function(d) {
-        var x = (d.source.y + d.target.y) / 2;
-     d.thisText =  "test-label";
-        return x - d.thisText.length/2 + 5; //added 5 to make up for node width. This needs to be worked out properly
-      })
-  */
+		// Update the links…
+		var link = svg.selectAll(".link")
+			.data(links, function(d) { 
+				return d.target.id; 
+			});
 
-  // Stash the old positions for transition.
-  nodes.forEach(function(d) {
-	d.x0 = d.x;
-	d.y0 = d.y;
-  });
-}
 
-// Toggle children on click.
-function click(d) {
-  if (d.children) {
-  	d._children = d.children;
-  	d.children = null;
-  } else {
-  	d.children = d._children;
-  	d._children = null;
-  }
-  update(d);
-}
+		// Enter any new links at the parent's previous position.
+		link.enter().insert("path", "g")
+			.attr("class", "link")
+			.style("stroke", function(d){
+					if (d.source.color == "#fff" || d.target.color == "#fff"){
+						return("#fff")
+					}else{
+						return(d.target.color)
+					}
+
+			})
+			.on("mouseover", function(obj){
+						if(timeout) clearTimeout(timeout);
+							timeout = setTimeout(mouseoverLink, 1000,obj);
+			}).on("mouseout", function(){
+				clearTimeout(timeout);
+			})
+			.attr("d", function(d) {
+			var o = {x: source.x0, y: source.y0};
+				return diagonal({source: o, target: o});
+			});
+
+		link.append("text")
+			.attr("class","text-link")
+			.attr("font-family", "Arial, Helvetica, sans-serif")
+			.attr("fill", "Black")
+			.style("font", "normal 12px Arial")
+
+
+		// Transition links to their new position.
+		link.transition()
+			.duration(duration)
+			.attr("d", diagonal);
+
+		// Transition exiting nodes to the parent's new position.
+		link.exit().transition()
+			.duration(duration)
+			.attr("d", function(d) {
+			var o = {x: source.x, y: source.y};
+				return diagonal({source: o, target: o});
+			})
+			.remove();
+
+		// Stash the old positions for transition.
+		nodes.forEach(function(d) {
+		d.x0 = d.x;
+		d.y0 = d.y;
+		});
+
+	}
+
+	/*   tool tip function  */
+
+	
+	function mouseover(d){
+		div.transition()        
+			.duration(200)      
+			.style("opacity", .9);      
+		div.html(tooltipNode(d.name))  
+			.style("left", (leftoffset+d.y+60) + "px")     
+			.style("top", (topoffset+d.x+10) + "px");
+	}
+
+	function mouseout(d){
+		div.transition()        
+			.duration(500)      
+			.style("opacity", 0);  
+	}
+
+
+	function mouseoverLink(l){
+		/*var o = {x: l.source.x0, y: l.target.y0};
+		d = diagonal({source: o, target: o});
+		//console.log(d.x0,d.y0);
+		div.transition()        
+			.duration(200)      
+			.style("opacity", .9);      
+		div.html(tooltipLink(l.target.name))  
+			.style("left", (leftoffset+d.y+60) + "px")     
+			.style("top", (topoffset+d.x +10) + "px");*/
+	}
+
+		// Toggle children on click.
+	function click(d) {
+		div.transition()        
+			.duration(0)      
+			.style("opacity", 0);  
+		if (d.children) {
+			d._children = d.children;
+			d.children = null;
+		} else {
+			d.children = d._children;
+			d._children = null;
+		}
+		update(d);
+	}
+
+	function dblClick(d){
+		d3.select("#networksvg").remove();
+		treeData = null;
+		treeData = load_tree(snpid=d.name);
+		// Set input box value to SNP name
+		$("#snpinput").val(d.name);
+		render_tree(treeData);
+		clearTimeout(timeout);
+		mouseout(obj);
+	}
+}  // End render_tree function
+
+
+/* Activate key bindings */
+$(".inputBox").on('keyup', function (e) {
+	if (e.keyCode == 13) {
+		change_root()
+	}
+});
+
+/* Load the default tree */
+treeData = load_tree(snpid=selected_default);
+render_tree(treeData);
 
 </script>
 
