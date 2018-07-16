@@ -54,7 +54,7 @@ class TaxonomyTree(DatabaseConnection):
 	"""docstring for TaxonomyTree"""
 	def __init__(self,database,table,verbose=False):
 		super(TaxonomyTree, self).__init__(database,table,verbose)
-		
+
 	def get_names(self,table="SNP"):
 		'''Get all names from the name table and create a name dictionary'''
 		query = '''
@@ -85,6 +85,59 @@ class TaxonomyTree(DatabaseConnection):
 			nodes[row[0]] = row[1] 
 			nodes[row[1]] = row[0] 
 		return nodes
+
+	def get_children(self,nodes,parent,table="SNP",depth=100):
+		'''Function that returns all children of a parent, allows a depth limit default 100 == no limit
+			Observe returned list will not include the root.
+		'''
+		nodes = map(str,nodes)
+		children = []
+		query = '''
+				SELECT child_i,parent_i
+					FROM {table}Tree 
+					WHERE parent_i in({nodes})
+		'''
+		
+		q1 = query.format(
+				nodes=",".join(nodes),
+				table=self.table 
+		)
+
+		data = self.query(q1).fetchall()
+		### Add all children
+		if len(data) < 1 or depth == 0:
+			## No childen founc return empty array
+			return []
+		
+		for node in data:
+			child = node[0]
+			children.append(child)
+
+		children += self.get_tree(children,parent=parent,depth=depth-1)
+		return children
+
+	def get_path(self,node,table="SNP",clear=False):
+		path = []
+		query = '''
+					SELECT parent_i 
+						FROM {table}Tree
+						WHERE child_i = "{node}"
+		'''
+		q1 = query.format(
+			node=node,
+			table=self.table 
+		)
+
+		data = self.query(q1).fetchall()
+
+		if len(data) < 1:
+			return
+		for node in data:
+			self.path.append(self.nodes[node[0]])
+		
+		path += self.get_path(node[0])
+		return path
+
 
 
 class FrancisellaTree(TaxonomyTree):
@@ -125,10 +178,10 @@ class FrancisellaTree(TaxonomyTree):
 		return {
 			"263": "#fcdfde",
 			"A/M.1": "#ccffee",
-			"B.8": "#eeffaa"
+			"B.8": "#eeff72"
 		}
 
-	def color_path(self,node,color="#eeffaa"):
+	def color_path(self,node,color="#eeff72"):
 		nodes = self.get_path(node,clear=True)
 		print(self.snppath)
 		d = {}
