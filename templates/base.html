@@ -13,9 +13,20 @@
 	<body>
 		
 		<div class='site_title'>
+			<img class="main_logo" src="/static/images/LogoVersionDavidV2.png"/ width="300px">
 			<div class="page_title">
+
 				{% block title %}{% endblock title %}
+
 			</div>
+			
+			{% if user.is_authenticated %}
+			<div class="logoutdiv">
+			</div>
+			<a href="/logout" class="logout">logout</a>
+			
+			{% endif %}
+			
 		</div>
 		
 		<div class='navigation'>
@@ -34,6 +45,8 @@
 		<div class="network-code-container">
 			{% block network %}{% endblock network %}
 		</div>
-
+		<div class="footer">
+			Contacts: bioinformatics@foi.se, Site administrator: david.sundell@foi.se
+		</div>
 	</body>
 </html>

@@ -15,6 +15,7 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
+from django.contrib.auth import views as auth_views
 
 from francisella_web.views import (
     HomeView,
@@ -23,16 +24,22 @@ from francisella_web.views import (
     AnalysisView,
     FormView,
     get_tree_data,
+    ProcessView,
+    databaseRequest
 )
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', HomeView.as_view(), name="home"),
     path('wiki/', WikiView.as_view(), name="wiki"),
-    path('submission/', SubmitView.as_view(), name="submission"),
+    path('submission/', SubmitView.as_view(success_url="/processSubmission/"), name="submission"),
     path('analysis/', AnalysisView.as_view(), name="analysis"),
     #path('submission/', FormView.as_view(), name="submission"),
     path('get_tree/', get_tree_data, name="analysis"),
+    path('databaseRequest/', databaseRequest, name="databaseRequest"),
+    path('processSubmission/',ProcessView.as_view(),name="processSubmission"),
+    path('login/', auth_views.login, name='login'),
+    path('logout/', auth_views.logout, {'next_page': '/'}, name='logout')
     
     
 ]

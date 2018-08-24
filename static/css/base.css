@@ -10,21 +10,62 @@ body {
 	font-family: Courier;
 }
 
+img.main_logo{
+	display:flex;
+	padding: 0px;
+}
+
+.logout{
+	text-decoration: none;
+	font-family: Courier;
+	font-size: 15px;
+	align-self:flex-start;
+	background-color: #b3cde0; 
+	color: #005b96;
+	border:0px;
+	border-radius: 5px;
+	padding: 3px;
+	margin-top:10px;
+	margin-right:10px;
+
+}
+.logoutdiv{
+	display:flex;
+	flex-direction:row;
+	justify-content:stretch;
+	width: 100%;
+	flex-shrink: 10;
+}
+
 /* base styling */
 
 .site_title{
 	display:flex;
-	flex-direction:column;
-	justify-content:center;
+	flex-direction:row;
+	justify-content:flex-start;
 	width:100%;
-	background-color: #b3cde0;
-	border: 1px solid black;
+	background-color: #005b96;  /* Mörk: 005b96, Ljus: b3cde0 nästan vit: e8f3ff, Grön eeff72 */
+	border: 1px solid #005b96;
 	border-radius: 15px;
 }
 .page_title{
+	align-self:center;
 	font-size: 30px;
-	padding: 0.2em;
-	}
+	padding: 0em;
+	color:#e8f3ff;
+	margin-left: 30px;
+	margin-top:10px;
+	width: 100%;
+	flex-shrink: 1;
+	/*margin-bottom:28px;*/
+}
+
+.footer{
+	background-color: #005b96;  /* Mörk: 005b96, Ljus: b3cde0 nästan vit: e8f3ff, Grön eeff72 */
+	border-radius: 15px;
+	padding: 5px;
+	color: #e8f3ff;
+}
 
 .navigation{
 	width: 100%;
@@ -63,7 +104,7 @@ a.navButton {
     align-items:center;
     text-decoration: none;
     background-color: #005b96;
-    color:#b3cde0;
+    color:#e8f3ff;   /**/
     padding-left: 0.5em;
     padding-right: 0.5em;
     padding-top:0.4em;
@@ -97,18 +138,43 @@ a.navButton:active{
 	transform: translate(2px,2px);
 }
 
+
 /* Network container */
 
 .tool-container2{
 	display: flex;
 	flex-direction:column;
 	justify-content:center;
-	border-top: 1px solid black;
+	border-top: 1px solid #005b96;
 	border-top-left-radius: 15px;
 	border-top-right-radius: 15px;
-	border-left:0.5px solid grey;
-	border-right:0.5px solid grey;
+	border-left:0.5px solid #0074bf;
+	border-right:0.5px solid #0074bf;
 	padding:0.5em;
+}
+
+/* Input box styling  */
+
+.networkInfoText{
+	display:flex;
+	justify-content:space-between;
+	font-size: 20px;
+}
+
+
+.inputBox{
+	align-self:flex-end;
+	width:50px;
+	padding:2px;
+	padding-left: 10px;
+	border-width: 0px;
+	border-radius: 5px;
+	background-color:#226c97;
+	color: #e8f3ff;
+	font-size:15px;
+}
+.inputBox:hover{
+	background-color: #447da9;
 }
 
 
@@ -158,23 +224,86 @@ a.navButton:active{
 	  stroke-width: 2px;
 	}
 
-/* Input box styling  */
+.submission{
+	margin-left:20px;
+	display:flex;
+	flex-flow: row wrap;
+  	align-content:flex-start;
+  	font-size: 15px;
+}
 
-.networkInfoText{
+#SNPnumber{
+	background-color: #8b9dc3;
+	color: #FFF;
+}
+
+.submission button{
+	border-radius: 5px;
+	border: 0px;
+	background-color: #005b96; 
+	color: #e8f3ff;
+	align-self: flex-start;
+	font-size: 15px;
+	padding-left: 5px;
+	padding-right: 5px;
+
+}
+
+.submission input{
+	border-radius: 5px;
+	border: 0px;
+	background-color: #005b96; 
+	color: #e8f3ff;
+	align-self: flex-end;
+	font-size: 15px;
+	padding-left: 5px;
+	padding-right: 5px;
+}
+.submission select{
+	border-radius: 5px;
+	border: 0px;
+	background-color: #005b96; 
+	color: #e8f3ff;
+	align-self: flex-end;
+	font-size: 15px;
+	padding-left: 5px;
+	padding-right: 5px;
+}
+.submission textarea{
+	border-radius: 5px;
+	border: 0px;
+	background-color: #005b96; 
+	color: #e8f3ff;
+	padding: 5px;
+}
+.submission label{
+	align-self:flex-start;
+	margin-right: 10px;
+}
+.submission p{
 	display:flex;
 	justify-content:space-between;
 }
 
-.inputBox{
-	align-self:flex-end;
-	width:50px;
-	padding:2px;
-	padding-left: 10px;
-	border-width: 0px;
-	border-radius: 5px;
-	background-color:#226c97;
-	color: #b3cde0;
-	font-size:15px;
+.submission #snp_custom {
+	margin-left: 50px;
+}
+
+.submission #showbutton1 {
+	margin-left: 20px;
+	background-color: #006ab0;
+}
+.submission #showbutton1:hover {
+	background-color: #006ab0;
+}
+
+.submission #submitbutton {
+	margin-top: 2px;
+	background-color: #963b00;
+	align-self:flex-start;
+}
+.submission #submitbutton:hover {
+	background-color: #b04500;
 }
 
 div.tooltip {   

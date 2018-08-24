@@ -9,14 +9,116 @@ Add new canSNP
 
 {% block content2 %}
 
-<form method='POST' action=''>{% csrf_token %}
-	{{form.as_p}}
-	Strain:<br>
-	  <input type="text" name="strain"><br>
-	  CanSNP's:<br>
-	  <textarea name="canSNPs"> </textarea><br>
-<input type='submit' value='Submit' />
+CanSNP id will be generated upon submission.
+
+<form method='POST' class = 'submission' action=''>
+	{% csrf_token %}
+	<div id="snp_base">
+
+	{{form.SNP_base.as_p}}
+	
+
+	<input id="submitbutton" type='submit' value='Submit' />
+	</div>
+	<button class="button" id="showbutton1" onclick="show_hide_custom_form('swap')">Add SNP manually</button>
+	<div id="snp_custom" style="display:none">
+		{{form.SNP_custom.as_p}}
+	</div>
 </form>
 
+<script>
+
+function getCookie(name) {
+	var cookieValue = null;
+	if (document.cookie && document.cookie != '') {
+		var cookies = document.cookie.split(';');
+		for (var i = 0; i < cookies.length; i++) {
+			var cookie = jQuery.trim(cookies[i]);
+			// Does this cookie string begin with the name we want?
+			if (cookie.substring(0, name.length + 1) == (name + '=')) {
+				cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+				break;
+			}
+		}
+	}
+	return cookieValue;
+}
+
+function updateClade(cladeid){
+	var csrftoken = getCookie('csrftoken');
+	var clade = $("#cladeField").val();
+	var subclade = $("#subCladeField").val();
+	console.log("Called");
+	$.ajax({
+		type: "POST",
+		url: "/databaseRequest/", 
+		async:false,
+		data: {
+			'csrfmiddlewaretoken':csrftoken,
+			'database':"Francisella_CanSNP.db",
+			'table':"SNP",
+			'cladeid':clade,
+			'subcladeid':subclade,
+			'request': "updateClade"
+		},
+		success: function(data) {
+			var snpnumber = data;
+			if(snpnumber != ""){
+				$('#SNPnumber').val(snpnumber);
+			}else{
+				$('#SNPnumber').val("");
+			}
+		}
+	});
+}
+
+function updateSubClade(cladeid){
+	var csrftoken = getCookie('csrftoken');
+	var clade = $("#cladeField").val()
+	var subclade = $("#subCladeField").val()
+	console.log("Called");
+	$.ajax({
+		type: "POST",
+		url: "/databaseRequest/", 
+		async:false,
+		data: {
+			'csrfmiddlewaretoken':csrftoken,
+			'database':"Francisella_CanSNP.db",
+			'table':"SNP",
+			'cladeid':clade,
+			'subcladeid':subclade,
+			'request': "updateSubClade"
+		},
+		success: function(data) {
+			var snpnumber = data;
+			if(snpnumber != ""){
+				$('#SNPnumber').val(snpnumber);
+			}else{
+				$('#SNPnumber').val("");
+			}
+		}
+	});
+}
+
+function show_hide_custom_form(variable){
+	if( $("#snp_custom").is(":visible") && variable == "swap"){
+		$("#snp_custom").hide();
+		$("#showbutton1").html("Add SNP manually");
+		updateClade();
+	}
+	else if(variable == "swap"){
+		$("#snp_custom").show();
+		$("#showbutton1").html("close");
+	}
+}
+$("#id_SNP_base-Select").on("change", function(event) { 
+     addCountry(this);
+});
+
+function addCountry(obj){
+	var country = obj.value;
+	$("#id_SNP_base-countries_selected").append(country+",");
+}
+</script>
 {% endblock content2 %}
 

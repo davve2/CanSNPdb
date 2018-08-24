@@ -1,54 +1,12 @@
-import sqlite3
 import sys
 import argparse
 import json
 
-class DatabaseConnection(object):
-	"""docstring for DatabaseConnection"""
-	def __init__(self, database,table, verbose=False):
-		super(DatabaseConnection, self).__init__()	
-		self.verbose = verbose
-		self.table = table
-		self.database = database
-		self.conn = self.connect(self.database)
-		self.cursor = self.create_cursor(self.conn)
+## Add module path to script path
+sys.path.insert(0, "francisella_web/scripts/modules")
 
-	def connect(self,database):
-		'''Create database connection'''
-		try:
-			conn = sqlite3.connect(database)
-			if self.verbose:
-				print("{database} opened successfully.".format(database=database))
-
-			return conn
-		except Exception as e:
-			sys.stderr.write(str(e))
-		return None
-		
-	def create_cursor(self,conn):
-		'''Create a db cursor'''
-		try:
-			cursor = conn.cursor()
-			if self.verbose:
-				print("cursor created.")
-			return cursor
-		except Exception as e:
-			sys.stderr.write(str(e))
-		return None
-
-	def query(self,query,cursor=False):
-		res = False
-		if not cursor:
-			cursor = self.cursor
-		try:
-			res = cursor.execute(query)
-		except Exception as e:
-			sys.stderr.write(str(e))
-		if res:
-			return res
-		else:
-			sys.stderr("Result not found.")
-			exit()
+### Import DatabaseConnection module
+from DatabaseConnection import DatabaseConnection
 
 class TaxonomyTree(DatabaseConnection):
 	"""docstring for TaxonomyTree"""
@@ -183,7 +141,8 @@ class FrancisellaTree(TaxonomyTree):
 
 	def color_path(self,node,color="#eeff72"):
 		nodes = self.get_path(node,clear=True)
-		print(self.snppath)
+		if self.verbose:
+			print(self.snppath)
 		d = {}
 		for n in nodes:
 			d[n] = color
@@ -290,7 +249,92 @@ class FrancisellaTree(TaxonomyTree):
 		self.get_tree(children,parent=parent)
 		return
 
+class SaveTreeForm(DatabaseConnection):
+	"""docstring for SaveTreeForm"""
+	def __init__(self, user, database,table,verbose=False, **kwargs):
+		super(SaveTreeForm, self).__init__(database,table,verbose)
+		self.user = user
+		self.args = self.parse_web_args(kwargs)
+		self.name = self.get_new_id(clade=self.args["clade"],sub_clade=self.args["sub_clade"])
 
+		INSERT_QUERY = '''
+			INSERT INTO {table}
+			({columns})
+			VALUES
+			({values})
+		'''
+
+		print("User: {user} submitted arguments: ".format(user=user), self.args)
+
+	def parse_locations(self,locations):
+		locations = locations[0].split(",")
+		return locations
+
+	def parse_web_args(self,args):
+		'''This function parses the variable keys of the webargs, which has SNP_base-varname and SNP_custom-varname added to their names'''
+		parsed = {k.split("-")[-1]: args[k] for k in args.keys()}
+		parsed["countries_selected"] = self.parse_locations(parsed["countries_selected"])
+		return parsed
+
+	def get_new_id(self,clade,sub_clade):
+		'''Function that checks new ID available and adds new ID to table'''
+		return "test.name"
+		query = '''
+				SELECT clade,sub_clade,max(number) FROM Name
+		'''
+		res = self.query(query)
+		return ".".join(res)
+
+	'''Insert functions'''
+
+	def get_selected(self,fields, allowedFields):
+		'''This function returns the allowed selected fields for the chosen table'''
+		selected = {k: fields[k] for k in fields.keys() & allowedFields}
+		return selected
+
+	def name(self,data,table="Name"):
+		'''Insert data into Name table'''
+		metadataFields = {"clade","sub_clade","number","name","alt","submitted","modified"}
+		selected = self.get_selected(data,metadataFields)
+		res = self.insert(data=selected,table=table)
+		#return self.cursor.lastrowid
+
+	def node(self,data, table="Node"):
+		'''Insert data into Node table'''
+		metadataFields = {"parent_i","child_i"}
+		selected = self.get_selected(data,metadataFields)
+		res = self.insert(data=selected,table=table)
+
+	def info(self,data, table="Info"):
+		'''Insert data into Info table'''
+		res = self.insert(data=selected,table=table)
+
+	def metadata(self,data, table="Metadata"):
+		'''Insert data into metadata table'''
+		metadataFields = {"name_id","country","location","specific.location","coordinates","source","geodata"}
+		selected = self.get_selected(data,metadataFields)
+		res = self.insert(data=selected,table=table)
+
+	def rank(self,data, table="Rank"):
+		'''Insert data into rank table'''
+		metadataFields = {"rank_name"}
+		selected = self.get_selected(data,metadataFields)
+		res = self.insert(data=selected,table=table)
+
+	def genomes(self,data,table="Genomes"):
+		'''Insert data into genomes table'''
+		metadataFields = {"genome_id","name_id","genome","taxid","parent_taxid"}
+		selected = self.get_selected(data,metadataFields)
+		res = self.insert(data=selected,table=table)
+
+	def insert_from_web(self):
+		'''Function that is called from website and directly inserts nessesary information'''
+
+		pass
+
+	def insert_from_file(self,file):
+		'''Multiple SNPs can be added and added from file.'''
+		pass
 
 def get_args():
 	parser = argparse.ArgumentParser(description='Create Tree')
@@ -314,6 +358,10 @@ def get_tree(SNPid="A.I.3",table="SNP",database="FOIWebsite.db"):
 	#args = get_web_args()
 	obj = FrancisellaTree(database=database,table=table,SNPid=SNPid)
 	return obj.get_tree_obj()
+
+def submit_SNP(user=None,database="submitted.db",table="SNP",**kwargs):
+	obj = SaveTreeForm(user=user,database=database,table=table,**kwargs)
+	return obj
 
 if __name__=="__main__":
 	#print("Test class CreateFrancisellaTree")

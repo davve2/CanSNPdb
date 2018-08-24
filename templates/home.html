@@ -3,20 +3,20 @@
 {% block head_title %} Home {% endblock head_title %}
 
 {% block title %}
-<i>Francisella</i> Calonial SNP database
+<i>Francisella</i> Canonical <span style="color: #eeff72">SNP</span>  database
 {% endblock title %}
 
 
 {% block content %}
 
-Main wiki text, or explanation of site (home)
+<!-- Main wiki text, or explanation of site (home) -->
 
 {% endblock content %}
 
 
 {% block content2 %}
 
-<div class="networkInfoText" >Default Tree view, of current latest version of the CanSNP tree (interacitve?) <input class="inputBox" id="snpinput" size="2" name="SNProot" value="263"> </input>
+<div class="networkInfoText" ><div><i>Francisella</i> canonical tree</div> <div> <small>Highlight: <input class="inputBox" id="highlight" size="2" name="highligt" value="">  Root:</small><input class="inputBox" id="snpinput" size="2" name="SNProot" value="263"> </input></div>
 </div>
 <div id="network-container" class="network-container">
 
@@ -32,10 +32,10 @@ Main wiki text, or explanation of site (home)
 <script>
 
 var timeout;
-var topoffset = 210;
+var topoffset = 270;
 var leftoffset = 10;
 var treeData = null;
-var glob_height = 500;
+var glob_height = 2000;
 var selected_default = "263";
 
 function set_glob_height(height){
@@ -301,7 +301,7 @@ function render_tree(ltreeData){
 	function mouseover(d){
 		div.transition()        
 			.duration(200)      
-			.style("opacity", .9);      
+			.style("opacity", 1);      
 		div.html(tooltipNode(d.name))  
 			.style("left", (leftoffset+d.y+60) + "px")     
 			.style("top", (topoffset+d.x+10) + "px");
