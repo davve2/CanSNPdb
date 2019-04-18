@@ -1,6 +1,21 @@
-import sys
-import os
+#!/usr/bin/env python3 -c
+import sys, os
 import sqlite3
+
+'''
+DatabaseConnections and DatabaseFunctions are classes written to simplify database work using sqlite3
+This particular script is specially adapted to suit the use for CanSNPer web database!
+'''
+
+__version__ = "0.1.5"
+__author__ = "David Sundell"
+__credits__ = ["David Sundell"]
+__license__ = "GPLv3"
+__maintainer__ = "FOI bioinformatics group"
+__email__ = ["bioinformatics@foi.se", "david.sundell@foi.se"]
+__date__ = "2019-04-17"
+__status__ = "Production"
+__partof__ = "CanSNPerdb"
 
 class ConnectionError(Exception):
 	def __init__(self, value):
@@ -20,6 +35,9 @@ class DatabaseConnection(object):
 			os.system("python modules/database/CreateDatabase.py {database}".format(database=self.database))
 		self.conn = self.connect(self.database)
 		self.cursor = self.create_cursor(self.conn)
+
+	def __repr__(self):
+		return "Object of class DatabaseConnection, connected to {database}".format(database=self.database)
 
 	def connect(self,database):
 		'''Create database connection'''
@@ -89,25 +107,31 @@ class DatabaseConnection(object):
 		)
 		return self.query(insertStr,insert_val=values)
 
-class DatabaseFunctions(object):
-	"""docstring for DatabaseFunctions."""
+class DatabaseFunctions(DatabaseConnection):
+	"""CanSNPerdb database function class contains multiple additional database 
+		functions to simplify data access related to the website, its a subclass of DatabaseConnection"""
 	def __init__(self, database, verbose=False):
-		super().__init__()
-		self.verbose = verbose
+		super().__init__(database,verbose)
 		if self.verbose: print("Load DatabaseFunctions")
 		### store DatabaseConnection object reference
-		self.database = database
 
-	'''Set functions'''
+	def __repr__(self):
+		return "Object of class DatabaseFunctions, connected to {database}".format(database=self.database)
+
+	'''
+		Set functions
+	'''
 	def set_database(self, database):
 		'''Change the database object default in class'''
 		self.database = database
 
-	'''Get functions of class'''
+	'''
+		Get functions of class
+	'''
 	def get_taxid_base(self):
 		'''Fetch the next incremental node from the current database'''
 		QUERY = "SELECT MAX(id) AS max_id FROM nodes"
-		return self.database.query(QUERY).fetchone()[0]+1
+		return self.query(QUERY).fetchone()[0]+1
 
 	def get_genomes(self, database=False,limit=0):
 		'''Get the list of genomes in the database'''
@@ -131,7 +155,7 @@ class DatabaseFunctions(object):
 		nodeDict = {}
 		QUERY = '''SELECT id,name FROM nodes'''
 		if not database:
-			database = self.database
+			database = self
 		for node in database.query(QUERY).fetchall():
 			nodeDict[node[0]] = node[1]
 			if col == 1:
@@ -143,18 +167,20 @@ class DatabaseFunctions(object):
 		'''This function returns all links in the given database'''
 		QUERY = '''SELECT parent,child FROM tree WHERE parent in ({nodes}) OR child in ({nodes})'''.format(nodes=",".join(map(str,nodes)))
 		if not database:
-			database = self.database
+			database = self
 		links = database.query(QUERY).fetchall()
 		return links
 
-	'''Add functions of class'''
+	'''
+		Add functions of class
+	'''
 	def add_node(self, description, id=False):
 		'''Add node to tree'''
 		info = { "name": description }
 		### If ID is supplied skip autoincrement and add specific ID
 		if id:
 			info["id"] = id
-		taxid_base = self.database.insert(info, table="nodes")
+		taxid_base = self.insert(info, table="nodes")
 		return taxid_base
 
 	def add_link(self, child, parent,table="tree"):
@@ -163,7 +189,7 @@ class DatabaseFunctions(object):
 			"child": child,
 			"parent": parent
 		}
-		return self.database.insert(info, table="tree")
+		return self.insert(info, table="tree")
 
 	def add_genome(self, id, genome):
 		'''Add genome annotation to nodes'''
@@ -171,7 +197,7 @@ class DatabaseFunctions(object):
 			"id": id,
 			"genome": genome
 		}
-		return self.database.insert(info, table="genomes")
+		return self.insert(info, table="genomes")
 
 	def add_links(self,links, table="tree",hold=False):
 		'''Add links from a list to tree'''
@@ -183,7 +209,7 @@ class DatabaseFunctions(object):
 				added_links +=1
 		## Commit changes
 		if not hold:
-			self.database.commit()
+			self.commit()
 		return added_links
 
 	def add_nodes(self,nodes, table="tree",hold=False):
@@ -196,29 +222,58 @@ class DatabaseFunctions(object):
 				added_nodes +=1
 		## Commit changes
 		if not hold:
-			self.database.commit()
+			self.commit()
 		return added_nodes
 
-	'''Delete functions of class'''
+	'''
+		Delete functions of class
+	'''
 	def delete_links(self,links, table="tree",hold=False):
 		'''This function deletes all links given in links'''
 		QUERY = "DELETE FROM {table} WHERE parent = {parent} AND child = {child}"
 		for parent,child in links:
-			res = self.database.query(QUERY.format(table=table, parent=parent, child=child))
+			res = self.query(QUERY.format(table=table, parent=parent, child=child))
 		## Commit changes
 		if not hold:
-			self.database.commit()
+			self.commit()
 
 	def delete_nodes(self, nodes, table="nodes",hold=False):
 		'''This function deletes all nodes given in nodes'''
 		QUERY = "DELETE FROM {table} WHERE id = {node}"
 		for node in nodes:
-			res = self.database.query(QUERY.format(table=table, node=node))
+			res = self.query(QUERY.format(table=table, node=node))
 		## Commit changes
 		if not hold:
-			self.database.commit()
+			self.commit()
 
 	def num_rows(self,table):
 		'''Return the number of rows in a table'''
 		QUERY = '''SELECT Count(*) FROM {table}'''
-		return self.database.query(QUERY.format(table=table)).fetchall()[0][0]
+		return self.query(QUERY.format(table=table)).fetchall()[0][0]
+
+	'''
+		CanSNPfunctions
+	'''
+	def get_snps(self, organism,reference="SCHUS4.2"):
+		'''Returns a list of all SNPs and their positions.
+		Keyword arguments:
+		organism -- the name of the organism
+		returns: results as a dictionary with tuple SNP for each position {pos: (pos, refBase, TargetBase, SNPid)}
+				 and a list of positions sorted ASC
+		'''
+		SNPs = {}
+		res = self.query("""SELECT Strain, Position, Derived_base, Ancestral_base, SNP
+										FROM {organism}
+										WHERE Strain = ?
+									""".format(organism=organism), (reference,))
+		for strain, pos,tbase,rbase,SNP in res.fetchall():
+			SNPs[pos] = tuple([pos,rbase, tbase,SNP])
+		if len(SNPs) == 0:
+			raise ValueError("No SNP's was found in the database")
+		snp_positions = list(SNPs.keys())
+		snp_positions.sort()
+		return SNPs,snp_positions
+
+	def get_references(self):
+		query = """SELECT DISTINCT(Strain) FROM Sequences"""
+		return [x[0] for x in self.query(query).fetchall()]
