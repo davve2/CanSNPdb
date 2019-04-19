@@ -16,11 +16,11 @@ __date__ = "2019-04-19"
 __status__ = "Production"
 __partof__ = "CanSNPerdb"
 
-from DatabaseConnection import DatabaseFunctions
+from DatabaseConnection import XMFAFunctions
 
 class ParseXMFA(object):
 	"""docstring for ParseXMFA."""
-	def __init__(self, verbose=False, debug=False, **kwargs):
+	def __init__(self, verbose=False, **kwargs):
 		super(ParseXMFA, self).__init__()
 		### Define translation table for complement base
 		self.rcDict = {
@@ -33,7 +33,6 @@ class ParseXMFA(object):
 		
 		'''Define all base variables'''
 		self.verbose = verbose
-		self.debug = debug
 		## as the snps are ordered according to the reference mauve positions they can be used sequentialy without search
 
 		'''SNPs will be stored as a sorted set containing (position, refBase, targetBase,SNPname)'''
@@ -48,38 +47,46 @@ class ParseXMFA(object):
 		dna_rev = [ self.rcDict[x] for x in dna[::-1] ]
 		return "".join(dna_rev)
 
-	def get_SNPs(self,ref,target,snp=0,head=0):
-		'''Walk through the paired sequences and save SNPs'''
-		snppos,rbase,tbase,_snp = snp    	## Retrieve all information known about the next upcoming SNP
-		snppos -= int(head["start"])-1  	## python counts from 0 not 1
-		_rbase = False                    	## create place holder for reference base
-		_snp = False                    	## create place holder for target base
+	def _next_pos(self):
+		'''return the next SNP position if list is not empty'''
+		if len(self.snp_positions) > 0:
+			self.current_snp = self.snp_positions.pop(0)	## get next SNP
+		return
 
-		'''i will count the relative position in the reference (without -)'''
+	def _snpinfo(self,head):
+		snppos,rbase,tbase,snp_id = self.snplist[self.current_snp]    	## Retrieve all information known about the next upcoming SNP
+		snppos -= int(head["start"])-1  	## python counts from 0 not 1
+		return snppos,rbase,tbase,snp_id
+
+	def get_SNPs(self,ref,target,head=0):
+		'''Walk through the paired sequences and save SNPs'''
+		snppos,rbase,tbase,snp_id = self._snpinfo(head)    	## Retrieve all information known about the next upcoming SNP
+		SNP = {snp_id:0} ## SNP not found		
+		'''i will count the relative position in the reference (without gaps -)'''
 		i = 0
-		''' ii is the actual position in the sequence '''
+		''' ii is the actual position in the sequence'''
 		base_positions = range(len(ref))
+		
 		'''	If sign is "-" it means the reference sequence is the 
 			reverse complement, hence positions need to be reversed
 		'''
 		if head["sign"] == "-":
 			base_positions = reversed(base_positions)
-		
 		for ii in base_positions:
-			if ref[ii] != "-":          	## if the reference contains a - do not count
+			if ref[ii] != "-":          	## if the reference contains a gap "-" do not count
 				i+=1
-			if i == snppos:                	## check the snp position
+			if i == snppos:                	## if current possition contains a snp
+				SNP[snp_id] = 0
 				_snp = target[ii]        	## get base in target sequence
 				if head["sign"] == "-":
 					'''If the sequence sign is "-" the complement base needs to be retrieved'''
-					_snp = self.reverse_complement(_snp)
-		SNP = {snp[3]:0} ## SNP not found
-		if tbase == _snp:                ## If Derived (target) base is in target sequence then call SNP
-			if self.debug: print((tbase), snp, head["sign"], "Derived SNP")
-			SNP[snp[3]] = 1 		## Derived SNP
-		elif rbase == _snp:  		## SNP is found but confirmed to be ancestral
-			if self.debug: print((tbase), snp, head["sign"], "Ancestral SNP")
-			SNP[snp[3]] = 2			## Ancestral SNP
+					_snp = self.rcDict[_snp]
+				if tbase == _snp:           ## SNP is confirmed to be Derived
+					SNP[snp_id] = 1 		## Derived SNP
+				elif rbase == _snp:  		## SNP is confirmed to be ancestral
+					SNP[snp_id] = 2			## Ancestral SNP
+				self._next_pos()  ## SNP found get next
+				snppos,rbase,tbase,snp_id = self._snpinfo(head)    	## Retrieve all information known about the next upcoming SNP		
 		return SNP
 
 	def parse_head(self,head):
@@ -96,23 +103,20 @@ class ParseXMFA(object):
 		seqLines = seqP.strip().split("> ") 	### Split pair into two sequences
 		headinfo = seqLines[0]					### Get header info of xmfa file (All comments)
 		if len(seqLines) > 2:  					### Both target and reference have sequence
-			
 			refSeq = seqLines[1].split("\n")				## reference sequence
 			refHead = self.parse_head(refSeq.pop(0))		## parse reference header info
 			targetSeq = seqLines[2].split("\n")				## target sequence
 			targetHead = self.parse_head(targetSeq.pop(0))	## parse target sequence header
 			'''Parse aligned sequence pair '''
-			if refHead["start"]+self.mask < self.current_snp and refHead["end"]-self.mask > self.current_snp:
+			while int(self.current_snp) < int(refHead["start"]): ## Current SNP not aligned
+				if not self._next_pos():
+					break
+			if refHead["start"] < self.current_snp and refHead["end"] > self.current_snp:
 				'''Check if current snp is within this mapped region else skip'''
-				while self.current_snp < refHead["end"]-self.mask: ## While next SNP is in this region continue
-					ref = "".join(refSeq)				 ## Make reference sequence one string
-					target = "".join(targetSeq)			 ## Make target sequence one string
-					
-					'''For each snp within this region find it and merge with all others'''
-					res = dict(**res, **self.get_SNPs(ref,target,snp=self.snplist[self.current_snp],head=refHead))
-					if len(self.snp_positions) == 0: break			## If there are no more SNPs break loop
-					self.current_snp = self.snp_positions.pop(0)	## get next SNP
-				return res 	## return dict of SNPs
+				ref = "".join(refSeq)				 ## Make reference sequence one string
+				target = "".join(targetSeq)			 ## Make target sequence one string
+				'''For each snp within this region find it and merge with all others'''
+				res = dict(**res, **self.get_SNPs(ref,target,head=refHead))
 		return res
 
 	def read_xmfa(self,f=False):
@@ -129,7 +133,7 @@ class ParseXMFA(object):
 
 	def run(self, database, xmfa, organism,reference):
 		'''Create connection to SNP database'''
-		self.database = DatabaseFunctions(database)
+		self.database = XMFAFunctions(database)
 		''' retrieve registered SNPs'''
 		self.snplist, self.snp_positions = self.database.get_snps(organism,reference)
 		'''save first snp to look for'''
@@ -151,6 +155,8 @@ if __name__=="__main__":
 	args = parser.parse_args()
 	
 	if args.verbose: print(args)
+	
 	xmfa = ParseXMFA(verbose=args.verbose,mask=args.mask)
 	SNPS = xmfa.run(database=args.database, xmfa=args.xmfa, organism=args.organism,reference=args.reference)
-	if args.verbose: print(SNPS)
+	print(SNPS)
+

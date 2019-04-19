@@ -251,8 +251,17 @@ class DatabaseFunctions(DatabaseConnection):
 		QUERY = '''SELECT Count(*) FROM {table}'''
 		return self.query(QUERY.format(table=table)).fetchall()[0][0]
 
+
+class XMFAFunctions(DatabaseConnection):
+	"""CanSNPerdb database function class contains multiple additional database 
+		functions to simplify data access related to the website, its a subclass of DatabaseConnection"""
+	def __init__(self, database, verbose=False):
+		super().__init__(database,verbose)
+		if self.verbose: print("Load XMFAFunctions")
+		### store DatabaseConnection object reference
+
 	'''
-		CanSNPfunctions
+		XMFAfunctions
 	'''
 	def get_snps(self, organism,reference="SCHUS4.2"):
 		'''Returns a list of all SNPs and their positions.
